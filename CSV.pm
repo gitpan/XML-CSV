@@ -4,6 +4,8 @@ use Text::CSV_XS;
 use Carp;
 
 #use strict;
+BEGIN
+{
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
 
 require 5.004;
@@ -16,8 +18,8 @@ require AutoLoader;
 @EXPORT = qw(
 	
 );
-$VERSION = '0.11';
-
+$VERSION = '0.14';
+};
 #bootstrap XML::CSV $VERSION;
 
 my $xml_xs_obj;  #Declared for global usage
@@ -122,6 +124,8 @@ sub print_xml
 	$args->{parent_tag} = "record" unless $args->{parent_tag}; 
 	$args->{format} = "\t" unless $args->{format};  #default {format} to tab if not supplied
 	
+	$class->{'document_element'} = $args->{file_tag};  ### Used later for declare_doctype() method
+	
 	if ($class->{'column_data'} == 0 || ($class->{'column_headings'} == 0 && $class->{'headings'}))
 	{
 		croak "There is no data to print, make sure that you parsed the document before printing";
@@ -135,6 +139,12 @@ sub print_xml
 		*FILE_OUT = *STDOUT;
 	}
 	
+	print FILE_OUT $class->{'declare_xml'}."\n" if $class->{'declare_xml'};
+	###This will replace the non-interpolated $class->{'document_element'} inside the $class->{'declare_doctype'} to get the real value
+	###Should be replace with something more practical in the future...
+	$class->{'declare_doctype'} =~ s/\$class\-\>\{\'document_element\'\}/$class->{'document_element'}/ if $class->{'declare_doctype'};
+	
+	print FILE_OUT $class->{'declare_doctype'}."\n" if $class->{'declare_doctype'};
 	print FILE_OUT "<$args->{file_tag}>", "\n";	### print initial document tag
 		
 	### declare the $tag for <$tag> and $loop_num for headers and data index tracking
@@ -173,6 +183,82 @@ sub print_xml
 	
 }
 
+
+sub declare_xml
+{
+
+	my $class = shift;
+	my $attr = shift || {};
+	
+	### Attributes: version, encoding, standalone
+
+	if (exists $attr->{'version'})
+	{
+		$class->{'declare_xml'} = "<?xml version=\"$attr->{'version'}\"" 
+	}
+	else
+	{
+		$csvxml_error = "The version attribute must be specified for declare_xml()\n
+				Usage: declare_xml\({version=>1.0, [encoding=>..., standalone=>yes/no]}\)";
+		croak "$csvxml_error" if ($class->{'error_out'} == 1);		
+	}
+	
+	$class->{'declare_xml'} .= " encoding=\"$attr->{'encoding'}\"" if exists $attr->{'encoding'};
+	if (exists $attr->{'standalone'} && ($attr->{'standalone'} =~ /[yes|no]/))
+	{
+		$class->{'declare_xml'} .= " standalone=\"$attr->{'standalone'}\""; 
+	}
+	elsif (!($attr->{'standalone'} =~ /[yes|no]/))
+	{
+		$csvxml_error = "The standalone attribute must be yes|no for declare_xml()\n
+				Usage: declare_xml\({version=>1.0, [encoding=>..., standalone=>yes/no]}\)";
+		croak "$csvxml_error" if ($class->{'error_out'} == 1);
+	}
+	
+	$class->{'declare_xml'} .= "?>";
+		
+	return $class->{'declare_xml'};
+
+}
+
+sub declare_doctype
+{
+	
+	my $class = shift;
+	my $attr = shift || {};
+	
+	### Attributes: source, location1, location2, subset
+
+	$class->{'declare_doctype'} = '<!DOCTYPE $class->{\'document_element\'}';
+	if ($attr->{source} eq "SYSTEM" || $attr->{source} eq "PUBLIC")
+	{
+		$class->{'declare_doctype'} .= " $attr->{'source'}";
+	}
+	else
+	{
+		$csvxml_error = "The source attribute is not set correctly";
+		croak "$csvxml_error" if ($class->{'error_out'} == 1);
+	}
+	
+	if (exists $attr->{location1} && !(exists $attr->{subset}))
+	{
+		$class->{'declare_doctype'} .= " \"$attr->{'location1'}\"";
+	}
+	else
+	{
+		$csvxml_error = "$attr->{'source'} location1 must be specified";
+		croak "$csvxml_error" if ($class->{'error_out'} == 1);
+	}
+	
+	$class->{'declare_doctype'} .= " \"$attr->{'location2'}\"" if exists $attr->{'location2'};
+	$class->{'declare_doctype'} .= " [$attr->{'subset'}]" if exists $attr->{'subset'};
+	
+	
+	$class->{'declare_doctype'} .= ">";
+	
+	return $class->{'declare_doctype'};
+	
+}
 
 $get_header = sub()
 {
@@ -216,13 +302,31 @@ $escape_char = sub()  ### Escape char per XML 1.0 specifications
 		${$arg} =~ s/\</\&lt\;/g;
 		${$arg} =~ s/\>/\&gt\;/g;
 		${$arg} =~ s/\'/\&apos\;/g;
-		${$arg} =~ s/\"/\&quot\;/g;		
+		${$arg} =~ s/\"/\&quot\;/g;
+		${$arg} =~ s/([\x80-\xFF])/$XmlUtf8Encode->(ord($1))/ge;		
 	}
 	else
 	{
 		croak "Usage: $escape_char->(\@cols_data) or $escape_char->(\$foo)\n";
 	}
 		
+};
+
+$XmlUtf8Encode = sub() {
+
+    my $n = shift;
+    if ($n < 0x80) {
+        return chr ($n);
+    } elsif ($n < 0x800) {
+        return pack ("CC", (($n >> 6) | 0xc0), (($n & 0x3f) | 0x80));
+    } elsif ($n < 0x10000) {
+        return pack ("CCC", (($n >> 12) | 0xe0), ((($n >> 6) & 0x3f) | 0x80),
+                     (($n & 0x3f) | 0x80));
+    } elsif ($n < 0x110000) {
+        return pack ("CCCC", (($n >> 18) | 0xf0), ((($n >> 12) & 0x3f) | 0x80),
+                     ((($n >> 6) & 0x3f) | 0x80), (($n & 0x3f) | 0x80));
+    }
+    return $n;
 };
   
 
@@ -232,7 +336,7 @@ $escape_char = sub()  ### Escape char per XML 1.0 specifications
 
 1;
 __END__
-# Below is the stub of documentation for your module. You better edit it!
+
 
 =head1 NAME
 
@@ -243,9 +347,12 @@ XML::CSV - Perl extension converting CSV files to XML
   use XML::CSV;
   $csv_obj = XML::CSV->new();
   $csv_obj = XML::CSV->new(\%attr);
-
+  
   $status = $csv_obj->parse_doc(file_name);
   $status = $csv_obj->parse_doc(file_name, \%attr);
+  
+  $csv_obj->declare_xml(\%attr);
+  $csv_obj->declare_doctype(\%attr);
 
   $csv_obj->print_xml(file_name, \%attr);
 
@@ -265,6 +372,21 @@ implemented in a soon coming release.  As the module will provide both: object a
 be used upon individual needs, system resources, and required performance.  Ofcourse the DOM
 implementation takes up more resources and in some instances timing, it's the easiest to use.
 
+=head1 ATTRIBUTES new()
+
+error_out - Turn on the error handling which will die on all errors and assign the error message to
+$XML::CSV::csvxml_error.
+
+column_headings - Specifies the column heading to use.  Passed as an array reference.  Can be used 
+as a supplement to using the first column in the file as the XML tag names.  Since XML::CSV does 
+not require you to parse the CSV file, you can provide your own data structure to parse.
+
+column_data - Specifies the CSV data in a two dimensional array.  Passed as an array reference.
+
+csv_xs - Specifies the CSV_XS object to use.  This is used to create custom CSV_XS object and override
+the default one created by XML::CSV.
+
+
 =head1 ATTRIBUTES parse_doc()
 
 headings - Specifies the number of rows to use as tag names.  Defaults to 0.
@@ -275,6 +397,39 @@ replaced with.  Defaults to undef meaning no substitution is done.  To eliminate
 characters use "" (empty string) or to replace with another see below.
 Ex.  {sub_char => "_"} or {sub_char => ""}           
            
+
+=head ATTRIBUTES declare_xml()
+
+version - Specifies the xml version.  
+Ex.  {version => '1.0'}
+
+encoding - Specifies the type of encoding.  XML standard defaults encoding to 'UTF-8' if notspecifically
+           set.
+Ex.  {encoding => 'ISO-8859_1'}
+
+standalone - Specifies the the document as standalone (yes|no).  If the document is does not rely on an
+             external DTD, DTD is internal, or the external DTD does not effect the contents of the document,
+             the standalone attribute should be set to 'yes', otherwise 'no' should be used.  For more info
+             see XML declaration documentation.
+Ex.  {standalone => 'yes'}
+
+=head ATTRIBUTES declare_doctype()
+
+source - Specifies the source of the DTD (SYSTEM|PUBLIC)
+Ex. {source => 'SYSTEM'}
+
+location1 - URI to the DTD file.  Public ID may be used if source is PUBLIC.
+Ex. {location1 => 'http://www.xmlproj.com/dtd/index_dtd.dtd'} or {location1 => '-//Netscape Communications//DTD RSS 0.90//EN'}
+
+location2 - Optional second URI.  Usually used if the location1 public ID is not found by the
+            validating parser.
+Ex. {location2 => 'http://www.xmlproj.com/file.dtd'}
+
+subset - Any other information that proceedes the DTD declaration.  Usually includes internal DTD if any.
+Ex. {subset => 'ELEMENT first_name (#PCDATA)>\n<!ELEMENT last_name (#PCDATA)>'}
+You can even enterpolate the string with $obj->{column_headings} to dynamically build the DTD.
+Ex. {subset => "ELEMENT $obj->{columnt_headings}[0] (#PCDATA)>"}
+
            
 =head1 ATTRIBUTES print_xml()
 
@@ -287,6 +442,11 @@ Ex. {parent_tag => "record_data"} (Do not use < and > when specifying)
 format - Specifies the character to use to indent nodes.  Defaults to "\t" (tab).
 Ex. {format => " "} or {format => "\t\t"}
 
+
+=head1 PUBLIC VARIABLES
+
+$csv_obj->{column_headings}
+$csv_obj->{column_data}
 
 =head1 EXAMPLES
          

@@ -13,3 +13,7 @@ Revision history for Perl extension XML::CSV.
 	character to use to indent child nodes.  Space, "\t",
 	or any other character(s) can be used.
 	
+0.14  Monday Apr 16 23:30:00 2001
+	-Added declare_xml() and declare_doctype() functions
+	to allow for xml declaration and doctype declarations.
+	

@@ -79,6 +79,8 @@ print "ok 3\n";
 eval{
 my $obj = XML::CSV->new();
 my $num = $obj->parse_doc("Data2.csv", {'headings' => 1, 'sub_char' => "_"});
+$obj->declare_xml({version => '1.0', encoding => 'UTF-8', standalone => 'yes'});
+$obj->declare_doctype({source => 'PUBLIC', location1 => '-//Netscape Communications//DTD RSS 0.90//EN', location2 => 'http://my.netscape.com/publish/formats/rss-0.91.dtd'});
 $obj->print_xml("out4.xml");
 };
 
