@@ -99,6 +99,7 @@ sub parse_doc
  	my @cols_data;
 	my $status = $xml_xs_obj->parse($line);  ### parse line by line
 	@cols_data = $xml_xs_obj->fields();  ### CSV_XS method returns data array for line passed
+	$escape_char->(\@cols_data);
 	push @arr_cols_data, \@cols_data;    ### stack the returned data
 	
 	}
@@ -181,7 +182,7 @@ $get_header = sub()
 		
 	my $status = $xml_xs_obj->parse($line);
 	@$ref_col = $xml_xs_obj->fields();
-
+	
 	if (defined($sub_char))
 	{
 		map {s/^([^a-zA-Z|_|:]|((x|X)(m|M)(l|L)))/$sub_char/g;} @$ref_col;  #convert all beginning \n or \t or \s to '_'	
@@ -191,7 +192,39 @@ $get_header = sub()
 	#print __LINE__.": $ref_col->[0]\n";
 
 	if ($ref_col) {return $#$ref_col;}else{return 0;}
-};  
+};
+
+$escape_char = sub()  ### Escape char per XML 1.0 specifications
+{                     ### Needs to be optimized for faster processing
+	
+	my $arg = shift;
+	if (ref($arg) eq 'ARRAY')
+	{
+		my $arr_index;
+		foreach $arr_index (0..$#{$arg})
+		{
+			@{$arg}[$arr_index] =~ s/\&/\&amp\;/g;
+			@{$arg}[$arr_index] =~ s/\</\&lt\;/g;
+			@{$arg}[$arr_index] =~ s/\>/\&gt\;/g;
+			@{$arg}[$arr_index] =~ s/\'/\&apos\;/g;
+			@{$arg}[$arr_index] =~ s/\"/\&quot\;/g;
+		}
+	}
+	elsif (ref($arg) eq 'SCALAR')
+	{
+		${$arg} =~ s/\&/\&amp\;/g;
+		${$arg} =~ s/\</\&lt\;/g;
+		${$arg} =~ s/\>/\&gt\;/g;
+		${$arg} =~ s/\'/\&apos\;/g;
+		${$arg} =~ s/\"/\&quot\;/g;		
+	}
+	else
+	{
+		croak "Usage: $escape_char->(\@cols_data) or $escape_char->(\$foo)\n";
+	}
+		
+};
+  
 
 # Preloaded methods go here.
 
