@@ -78,7 +78,7 @@ print "ok 3\n";
 
 eval{
 my $obj = XML::CSV->new();
-my $num = $obj->parse_doc("Data2.csv", {'headings' => 1});
+my $num = $obj->parse_doc("Data2.csv", {'headings' => 1, 'sub_char' => "_"});
 $obj->print_xml("out4.xml");
 };
 

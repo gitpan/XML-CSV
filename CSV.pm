@@ -83,7 +83,7 @@ sub parse_doc
 	if ($attr->{headings} != 0)
 	{		
 		$line = <FILE_CSV>;
-		my $cols_returned = $get_header->($line, \@col_headings, ($attr->{sub_char} || "_"));
+		my $cols_returned = $get_header->($line, \@col_headings, defined($attr->{sub_char})? $attr->{sub_char}:undef );
 		$csvxml_error = "There were no columns returned for headers, please check your CSV file" if (!$cols_returned);
 				
 		croak "$csvxml_error" if ($class->{'error_out'} == 1);
@@ -178,13 +178,16 @@ $get_header = sub()
 	my $line = shift;
 	my $ref_col = shift;
 	my $sub_char = shift;
-	
+		
 	my $status = $xml_xs_obj->parse($line);
 	@$ref_col = $xml_xs_obj->fields();
 
-	#map {s/^[^a-zA-Z|^_][^a-zA-Z|^-|^\.|^|xml]/_/g}, @$ref_col;  #convert all beginning \n or \t or \s to '_'	
-	map {s/^[^a-zA-Z|_]/$sub_char/g;} @$ref_col;  #convert all beginning \n or \t or \s to '_'	
-	map {s/[^a-zA-Z|^-|^.|]|xml/$sub_char/g;} @$ref_col;
+	if (defined($sub_char))
+	{
+		map {s/^([^a-zA-Z|_|:]|((x|X)(m|M)(l|L)))/$sub_char/g;} @$ref_col;  #convert all beginning \n or \t or \s to '_'	
+		map {s/[^a-zA-Z|^-|^.|^0-9|^:]/$sub_char/g;} @$ref_col;
+	}
+	
 	#print __LINE__.": $ref_col->[0]\n";
 
 	if ($ref_col) {return $#$ref_col;}else{return 0;}
@@ -235,8 +238,9 @@ headings - Specifies the number of rows to use as tag names.  Defaults to 0.
 Ex.  {headings => 1} (This will use the first row of data as xml tags)
            
 sub_char - Specifies the character with which the illegal tag characters will be
-replaced with.  Defaults to "_" (underscore).
-Ex.  {sub_char => "_"}           
+replaced with.  Defaults to undef meaning no substitution is done.  To eliminate
+characters use "" (empty string) or to replace with another see below.
+Ex.  {sub_char => "_"} or {sub_char => ""}           
            
            
 =head1 ATTRIBUTES print_xml()
