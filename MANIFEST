@@ -1,8 +1,8 @@
-Changes
+CHANGES
 MANIFEST
 Makefile.PL
 CSV.pm
-test.pl
-data1.csv
+Test.pl
+Data1.csv
 README
 

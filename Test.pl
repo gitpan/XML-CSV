@@ -13,8 +13,8 @@ $loaded = 1;
 
 eval{
 my $obj = XML::CSV->new();
-my $num = $obj->parse_doc("data1.csv", {'headings' => 1});
-$obj->print_xml("test1.xml");
+my $num = $obj->parse_doc("Data1.csv", {'headings' => 1});
+$obj->print_xml("out.xml");
 };
 
 if($@)
@@ -35,7 +35,7 @@ eval{
 $csv_obj = XML::CSV->new();
 @arr_of_headings = ('one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven');
 $csv_obj->{column_headings} = \@arr_of_headings;
-$csv_obj->parse_doc("data1.csv");
+$csv_obj->parse_doc("Data1.csv");
 $csv_obj->print_xml("out.xml");
 };
 

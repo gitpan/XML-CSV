@@ -1,0 +1,5 @@
+Revision history for Perl extension XML::CSV.
+
+0.10  Wed Jan 17 13:11:39 2001
+	Fixed the failed test
+
