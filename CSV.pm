@@ -209,10 +209,12 @@ XML::CSV - Perl extension converting CSV files to XML
 
 XML::CSV is a new module in is going to be upgraded very often as my time permits.
 For the time being it uses CSV_XS module object default values to parse the
-(*.csv) document and then using DOM implementation creates a perl data structure
-with xml tags and data.  At this point it does not allow for a SAX interface but is
+(*.csv) document and then creates a perl data structure with xml tags names and data.  At this point it does not allow for a write as you parse interface but is
 the first upgrade for the next release.  I will also allow more access to the data structures
-and more documentation.  As the module will provide both: object and event interfaces, it will
+and more documentation.  I will also put in more support for XML, since currently
+it only allows a simple XML structure.  Currently you can modify the tag structure
+to allow for attributes.  No DTD support is currently available, but will be
+implemented in a soon coming release.  As the module will provide both: object and event interfaces, it will
 be used upon individual needs, system resources, and required performance.  Ofcourse the DOM
 implementation takes up more resources and in some instances timing, it's the easiest to use.
 
