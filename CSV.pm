@@ -16,7 +16,7 @@ require AutoLoader;
 @EXPORT = qw(
 	
 );
-$VERSION = '0.01';
+$VERSION = '0.11';
 
 #bootstrap XML::CSV $VERSION;
 
@@ -57,7 +57,7 @@ sub parse_doc
 {
 	my $class = shift;
 	my $file_name = shift || croak "Usage: parse_doc(file_name, [\%attr])";
-	my $attr = shift;
+	my $attr = shift;  # %attr (headings, sub_char)
 	
 	eval {open FILE_CSV, "$file_name";};
 	
@@ -83,7 +83,7 @@ sub parse_doc
 	if ($attr->{headings} != 0)
 	{		
 		$line = <FILE_CSV>;
-		my $cols_returned = $get_header->($line, \@col_headings);
+		my $cols_returned = $get_header->($line, \@col_headings, ($attr->{sub_char} || "_"));
 		$csvxml_error = "There were no columns returned for headers, please check your CSV file" if (!$cols_returned);
 				
 		croak "$csvxml_error" if ($class->{'error_out'} == 1);
@@ -115,7 +115,12 @@ sub print_xml
 {
 	my $class = shift;
 	my $file_out = shift || 0;
-
+	my $args = shift || {};  # %attr (file_tag, parent_tag, format)
+	
+	$args->{file_tag} = "records" unless $args->{file_tag};  #default {parent_tag} to record if not supplied
+	$args->{parent_tag} = "record" unless $args->{parent_tag}; 
+	$args->{format} = "\t" unless $args->{format};  #default {format} to tab if not supplied
+	
 	if ($class->{'column_data'} == 0 || ($class->{'column_headings'} == 0 && $class->{'headings'}))
 	{
 		croak "There is no data to print, make sure that you parsed the document before printing";
@@ -129,7 +134,7 @@ sub print_xml
 		*FILE_OUT = *STDOUT;
 	}
 	
-	print FILE_OUT "<records>\n";	### print initial document tag
+	print FILE_OUT "<$args->{file_tag}>", "\n";	### print initial document tag
 		
 	### declare the $tag for <$tag> and $loop_num for headers and data index tracking
 	my $tag;
@@ -140,28 +145,28 @@ sub print_xml
 	
 		foreach $loop_num (0..$#{$class->{'column_data'}})
 		{
-			print FILE_OUT "\t<record>\n";
+			print FILE_OUT $args->{format}, "<$args->{parent_tag}>", "\n";
 			foreach $tag (0..$#{$class->{'column_headings'}})
 			{
-				print FILE_OUT "\t\t<$class->{'column_headings'}[$tag]>$class->{'column_data'}[$loop_num][$tag]</$class->{'column_headings'}[$tag]>\n";
+				print FILE_OUT $args->{format}, $args->{format}, "<$class->{'column_headings'}[$tag]>$class->{'column_data'}[$loop_num][$tag]</$class->{'column_headings'}[$tag]>\n";
 			}
-			print FILE_OUT "\t</record>\n";
+			print FILE_OUT $args->{format}, "</$args->{parent_tag}>", "\n";
 		}
 	
 	} else {  ### if column headings are not provided we default to $tag
 		
 		foreach $loop_num (0..$#{$class->{'column_data'}})
 		{
-	       		print FILE_OUT "\t<record>\n";
+	       		print FILE_OUT $args->{format}, "<$args->{parent_tag}>", "\n";
 			foreach $tag (0..$#{$class->{'column_data'}->[$loop_num]})
 			{
-				print FILE_OUT "\t\t<$tag>$class->{'column_data'}[$loop_num][$tag]</$tag>\n";
+				print FILE_OUT $args->{format}, $args->{format}, "<$tag>$class->{'column_data'}[$loop_num][$tag]</$tag>\n";
 			}
-			print FILE_OUT "\t</record>\n";
+			print FILE_OUT $args->{format}, "</$args->{parent_tag}>", "\n";
 		}
 	}
 	
-	print FILE_OUT "</records>\n";  ### print the final document tag
+	print FILE_OUT "</$args->{file_tag}>", "\n";  ### print the final document tag
 	
 	close FILE_OUT;
 	
@@ -172,10 +177,15 @@ $get_header = sub()
 {
 	my $line = shift;
 	my $ref_col = shift;
+	my $sub_char = shift;
 	
 	my $status = $xml_xs_obj->parse($line);
 	@$ref_col = $xml_xs_obj->fields();
-	print __LINE__.": $ref_col->[0]\n";
+
+	#map {s/^[^a-zA-Z|^_][^a-zA-Z|^-|^\.|^|xml]/_/g}, @$ref_col;  #convert all beginning \n or \t or \s to '_'	
+	map {s/^[^a-zA-Z|_]/$sub_char/g;} @$ref_col;  #convert all beginning \n or \t or \s to '_'	
+	map {s/[^a-zA-Z|^-|^.|]|xml/$sub_char/g;} @$ref_col;
+	#print __LINE__.": $ref_col->[0]\n";
 
 	if ($ref_col) {return $#$ref_col;}else{return 0;}
 };  
@@ -201,7 +211,7 @@ XML::CSV - Perl extension converting CSV files to XML
   $status = $csv_obj->parse_doc(file_name);
   $status = $csv_obj->parse_doc(file_name, \%attr);
 
-  $csv_obj->print_xml(file_name);
+  $csv_obj->print_xml(file_name, \%attr);
 
 
 
@@ -209,7 +219,8 @@ XML::CSV - Perl extension converting CSV files to XML
 
 XML::CSV is a new module in is going to be upgraded very often as my time permits.
 For the time being it uses CSV_XS module object default values to parse the
-(*.csv) document and then creates a perl data structure with xml tags names and data.  At this point it does not allow for a write as you parse interface but is
+(*.csv) document and then creates a perl data structure with xml tags names and data.  
+At this point it does not allow for a write as you parse interface but is
 the first upgrade for the next release.  I will also allow more access to the data structures
 and more documentation.  I will also put in more support for XML, since currently
 it only allows a simple XML structure.  Currently you can modify the tag structure
@@ -218,15 +229,40 @@ implemented in a soon coming release.  As the module will provide both: object a
 be used upon individual needs, system resources, and required performance.  Ofcourse the DOM
 implementation takes up more resources and in some instances timing, it's the easiest to use.
 
+=head1 ATTRIBUTES parse_doc()
+
+headings - Specifies the number of rows to use as tag names.  Defaults to 0.
+Ex.  {headings => 1} (This will use the first row of data as xml tags)
+           
+sub_char - Specifies the character with which the illegal tag characters will be
+replaced with.  Defaults to "_" (underscore).
+Ex.  {sub_char => "_"}           
+           
+           
+=head1 ATTRIBUTES print_xml()
+
+file_tag - Specifies the file parent tag.  Defaults to "records".
+Ex. {file_tag => "file_data"} (Do not use < and > when specifying)
+
+parent_tag - Specifies the record parent tag.  Defaults to "record".
+Ex. {parent_tag => "record_data"} (Do not use < and > when specifying)
+
+format - Specifies the character to use to indent nodes.  Defaults to "\t" (tab).
+Ex. {format => " "} or {format => "\t\t"}
+
+
+=head1 EXAMPLES
+         
+
 Example #1:
 
 This is a simple implementation which uses defaults
 
 use XML::CSV;
 $csv_obj = XML::CSV->new();
-$csv_obj->parse_doc("in_file.csv");
+$csv_obj->parse_doc("in_file.csv", {headings => 1});
 
-$csv_obj->print_xml("out.xml", {headings => 1});
+$csv_obj->print_xml("out.xml");
 
 Example #2:
 
@@ -238,7 +274,7 @@ $csv_obj = XML::CSV->new();
 $csv_obj->{column_headings} = \@arr_of_headings;
 
 $csv_obj->parse_doc("in_file.csv");
-$csv_obj->print_xml("out.xml");
+$csv_obj->print_xml("out.xml", {format => " ", file_tag = "xml_file", parent_tag => "record"});
 
 
 Example #3:

@@ -7,10 +7,10 @@ Description:
     XML::CSV allows to create your own Text::CSV_XS object with defaults that fit your needs or just use defaults.
     I will enhance it's functionality as time permits.  Efficiency is very important in parsing and writting large
     docs so one of the next enhancements will include an option for creating a data structure or write as you parse.
-	That will eliminate the need for storing a data structure before writting xml.  The data structure has it's own
-	benefits, since it allows you to provide your own structure or modify the existing one before you write to xml.
-	Any ideas or requests for enhancements or added functionality are very welcomed, so please feel free to email
-	them to me.
+    That will eliminate the need for storing a data structure before writting xml.  The data structure has it's own
+    benefits, since it allows you to provide your own structure or modify the existing one before you write to xml.
+    Any ideas or requests for enhancements or added functionality are very welcomed, so please feel free to email
+    them to me.
 
 Copying:
     Copyright (c) 2000 Ilya Sterin. All rights reserved.
