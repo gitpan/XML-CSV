@@ -1,6 +1,6 @@
 Revision history for Perl extension XML::CSV.
 
-0.10  Wed Jan 17 13:11:00 2001
+0.10  Wednesday Jan 17 13:11:00 2001
 	-Fixed the failed test
 	
 0.11  Sunday Mar 18 16:54:00 2001
@@ -17,3 +17,7 @@ Revision history for Perl extension XML::CSV.
 	-Added declare_xml() and declare_doctype() functions
 	to allow for xml declaration and doctype declarations.
 	
+0.15  Tuesday May 15 12:51:00 2001
+	-Fixed documentation (pod) bug.
+	-column headings are now default to <tr$loop_num> instead of <$tag> to conform
+	to XML standard of tag names strting with alphabetic chars or '_'.

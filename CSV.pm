@@ -164,14 +164,14 @@ sub print_xml
 			print FILE_OUT $args->{format}, "</$args->{parent_tag}>", "\n";
 		}
 	
-	} else {  ### if column headings are not provided we default to $tag
+	} else {  ### if column headings are not provided we default to <tr$loop_num>
 		
 		foreach $loop_num (0..$#{$class->{'column_data'}})
 		{
 	       		print FILE_OUT $args->{format}, "<$args->{parent_tag}>", "\n";
 			foreach $tag (0..$#{$class->{'column_data'}->[$loop_num]})
 			{
-				print FILE_OUT $args->{format}, $args->{format}, "<$tag>$class->{'column_data'}[$loop_num][$tag]</$tag>\n";
+				print FILE_OUT $args->{format}, $args->{format}, "<tr$loop_num>$class->{'column_data'}[$loop_num][$tag]</tr$loop_num>\n";
 			}
 			print FILE_OUT $args->{format}, "</$args->{parent_tag}>", "\n";
 		}
@@ -398,7 +398,7 @@ characters use "" (empty string) or to replace with another see below.
 Ex.  {sub_char => "_"} or {sub_char => ""}           
            
 
-=head ATTRIBUTES declare_xml()
+=head1 ATTRIBUTES declare_xml()
 
 version - Specifies the xml version.  
 Ex.  {version => '1.0'}
@@ -413,7 +413,7 @@ standalone - Specifies the the document as standalone (yes|no).  If the document
              see XML declaration documentation.
 Ex.  {standalone => 'yes'}
 
-=head ATTRIBUTES declare_doctype()
+=head1 ATTRIBUTES declare_doctype()
 
 source - Specifies the source of the DTD (SYSTEM|PUBLIC)
 Ex. {source => 'SYSTEM'}
